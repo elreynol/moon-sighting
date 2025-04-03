@@ -1,11 +1,11 @@
 {
   "name": "Moon Sighting App",
   "short_name": "MoonSight",
-  "description": "Track moon visibility and receive notifications for moon sightings",
+  "description": "Track moon visibility and receive notifications for optimal moon sighting opportunities",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#2c3e50",
-  "theme_color": "#3498db",
+  "theme_color": "#2c3e50",
   "icons": [
     {
       "src": "/images/icon-192x192.png",

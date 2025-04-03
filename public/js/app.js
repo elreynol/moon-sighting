@@ -4,163 +4,185 @@
  * Main application file for the moon sighting application.
  */
 
-// Register service worker first
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('Service Worker registered with scope:', registration.scope);
-        // Check for updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('New content is available; please refresh.');
-            }
-          });
-        });
-      })
-      .catch(error => {
-        console.error('Service Worker registration failed:', error);
-        showError('Service Worker registration failed. Some features may not work offline.');
-      });
-  });
+// Initialize managers
+const locationManager = new LocationManager();
+const notificationManager = new NotificationManager();
+const moonApi = new MoonAPI();
+
+// DOM Elements
+const moonCanvas = document.getElementById('moonCanvas');
+const moonPhase = document.getElementById('moonPhase');
+const moonAge = document.getElementById('moonAge');
+const sunsetTime = document.getElementById('sunsetTime');
+const moonsetTime = document.getElementById('moonsetTime');
+const visibilityText = document.getElementById('visibilityText');
+const confidenceText = document.getElementById('confidenceText');
+const coordinates = document.getElementById('coordinates');
+const locationsList = document.getElementById('locationsList');
+const locationBtn = document.getElementById('locationBtn');
+const notificationBtn = document.getElementById('notificationBtn');
+
+// Initialize the application
+async function initializeApp() {
+    try {
+        // Load saved locations
+        await locationManager.loadSavedLocations();
+        updateLocationsList();
+
+        // Set up location button
+        locationBtn.addEventListener('click', handleLocationChange);
+
+        // Set up notification button
+        notificationBtn.addEventListener('click', handleNotificationToggle);
+
+        // Load initial moon data
+        await updateMoonData();
+
+        // Set up periodic updates
+        setInterval(updateMoonData, 60000); // Update every minute
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        showError('Failed to initialize application');
+    }
 }
 
-// Main application script
-document.addEventListener('DOMContentLoaded', () => {
-  // Initialize managers
-  const locationManager = new LocationManager();
-  const notificationManager = new NotificationManager();
-  const moonApi = new MoonAPI();
-
-  // DOM Elements
-  const locationSelect = document.getElementById('location-select');
-  const notificationToggle = document.getElementById('notification-toggle');
-  const moonDisplay = document.getElementById('moon-display');
-  const visibilityInfo = document.getElementById('visibility-info');
-
-  // Initialize the application
-  async function initializeApp() {
+// Update moon data
+async function updateMoonData() {
     try {
-      // Load saved locations
-      const locations = locationManager.getSavedLocations();
-      locations.forEach(location => {
-        const option = document.createElement('option');
-        option.value = location.name;
-        option.textContent = location.name;
-        locationSelect.appendChild(option);
-      });
+        const currentLocation = locationManager.getCurrentLocation();
+        const moonData = await moonApi.getMoonVisibility(
+            currentLocation.latitude,
+            currentLocation.longitude
+        );
 
-      // Set up event listeners
-      locationSelect.addEventListener('change', handleLocationChange);
-      notificationToggle.addEventListener('click', handleNotificationToggle);
-
-      // Initial data update
-      await updateMoonData();
+        updateMoonDisplay(moonData);
+        updateVisibilityInfo(moonData);
+        updateCoordinates(currentLocation);
     } catch (error) {
-      console.error('Error initializing app:', error);
-      showError('Failed to initialize application');
+        console.error('Error updating moon data:', error);
+        showError('Failed to update moon data');
     }
-  }
+}
 
-  // Update moon data
-  async function updateMoonData() {
-    try {
-      const location = locationManager.currentLocation;
-      if (!location) return;
+// Update moon display
+function updateMoonDisplay(moonData) {
+    const ctx = moonCanvas.getContext('2d');
+    const centerX = moonCanvas.width / 2;
+    const centerY = moonCanvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
 
-      const visibility = await moonApi.getMoonVisibility(
-        location.latitude,
-        location.longitude
-      );
+    // Clear canvas
+    ctx.clearRect(0, 0, moonCanvas.width, moonCanvas.height);
 
-      updateMoonDisplay(visibility);
-      updateVisibilityInfo(visibility);
-    } catch (error) {
-      console.error('Error updating moon data:', error);
-      showError('Failed to update moon data');
-    }
-  }
+    // Draw moon
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#f1c40f';
+    ctx.fill();
 
-  // Update moon display
-  function updateMoonDisplay(visibility) {
-    if (!moonDisplay) return;
+    // Draw shadow based on moon age
+    const shadowWidth = (moonData.moonAge / 24) * radius * 2;
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(centerX - radius, centerY - radius, shadowWidth, radius * 2);
+
+    // Update text
+    moonPhase.textContent = getMoonPhaseText(moonData.moonAge);
+    moonAge.textContent = `Age: ${moonData.moonAge.toFixed(1)} hours`;
+}
+
+// Update visibility information
+function updateVisibilityInfo(moonData) {
+    sunsetTime.textContent = formatTime(moonData.sunset);
+    moonsetTime.textContent = formatTime(moonData.moonset);
     
-    const phase = determineMoonPhase(visibility.moonAge);
-    moonDisplay.innerHTML = `
-      <div class="moon-phase ${phase}">
-        <div class="moon-phase-text">${phase}</div>
-      </div>
-    `;
-  }
-
-  // Update visibility information
-  function updateVisibilityInfo(visibility) {
-    if (!visibilityInfo) return;
+    visibilityText.textContent = moonData.visible ? 'Potentially Visible' : 'Likely Not Visible';
+    visibilityText.className = moonData.visible ? 'visible' : 'not-visible';
     
-    visibilityInfo.innerHTML = `
-      <h3>Visibility: ${visibility.visibility}</h3>
-      <p>Confidence: ${Math.round(visibility.confidence * 100)}%</p>
-      <p>Sunset: ${formatTime(visibility.sunsetTime)}</p>
-      <p>Moonset: ${formatTime(visibility.moonsetTime)}</p>
-    `;
-  }
+    confidenceText.textContent = moonData.confidence;
+    confidenceText.className = getConfidenceClass(moonData.confidence);
+}
 
-  // Handle location change
-  async function handleLocationChange(event) {
+// Update coordinates display
+function updateCoordinates(location) {
+    coordinates.textContent = `Latitude: ${location.latitude.toFixed(4)}, Longitude: ${location.longitude.toFixed(4)}`;
+}
+
+// Update locations list
+function updateLocationsList() {
+    const locations = locationManager.getSavedLocations();
+    locationsList.innerHTML = '';
+
+    locations.forEach(location => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span>${location.name}</span>
+            <div>
+                <button onclick="selectLocation('${location.name}')">Select</button>
+                <button onclick="removeLocation('${location.name}')">Remove</button>
+            </div>
+        `;
+        locationsList.appendChild(li);
+    });
+}
+
+// Handle location change
+async function handleLocationChange() {
     try {
-      const locationName = event.target.value;
-      const location = locationManager.getSavedLocations()
-        .find(loc => loc.name === locationName);
-      
-      if (location) {
-        locationManager.setCurrentLocation(location);
+        const location = await locationManager.getCurrentLocation();
+        await locationManager.addLocation(location);
         await updateMoonData();
-      }
+        updateLocationsList();
     } catch (error) {
-      console.error('Error handling location change:', error);
-      showError('Failed to change location');
+        console.error('Error changing location:', error);
+        showError('Failed to change location');
     }
-  }
+}
 
-  // Handle notification toggle
-  async function handleNotificationToggle() {
+// Handle notification toggle
+async function handleNotificationToggle() {
     try {
-      if (notificationManager.isSubscribed()) {
-        await notificationManager.unsubscribe();
-      } else {
-        await notificationManager.subscribe();
-      }
-      notificationManager.updateUI();
+        if (notificationManager.isSubscribed()) {
+            await notificationManager.unsubscribe();
+            notificationBtn.textContent = 'Enable Notifications';
+        } else {
+            await notificationManager.subscribe();
+            notificationBtn.textContent = 'Disable Notifications';
+        }
     } catch (error) {
-      console.error('Error toggling notifications:', error);
-      showError('Failed to toggle notifications');
+        console.error('Error toggling notifications:', error);
+        showError('Failed to toggle notifications');
     }
-  }
+}
 
-  // Helper functions
-  function formatTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
+// Helper functions
+function formatTime(date) {
+    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
-  function determineMoonPhase(moonAge) {
-    if (moonAge < 7) return 'new';
-    if (moonAge < 14) return 'waxing-crescent';
-    if (moonAge < 21) return 'full';
-    if (moonAge < 28) return 'waning-crescent';
-    return 'new';
-  }
+function getMoonPhaseText(moonAge) {
+    if (moonAge < 1) return 'New Moon';
+    if (moonAge < 7) return 'Waxing Crescent';
+    if (moonAge < 14) return 'First Quarter';
+    if (moonAge < 21) return 'Waxing Gibbous';
+    if (moonAge < 28) return 'Full Moon';
+    if (moonAge < 35) return 'Waning Gibbous';
+    if (moonAge < 42) return 'Last Quarter';
+    return 'Waning Crescent';
+}
 
-  function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
-    setTimeout(() => errorDiv.remove(), 3000);
-  }
+function getConfidenceClass(confidence) {
+    switch (confidence.toLowerCase()) {
+        case 'high': return 'visible';
+        case 'medium': return 'uncertain';
+        case 'low': return 'not-visible';
+        default: return '';
+    }
+}
 
-  // Start the application
-  initializeApp();
-}); 
+function showError(message) {
+    // Implement error display logic
+    console.error(message);
+}
+
+// Initialize the application when the DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeApp); 
