@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moon Sighting Notification Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .info {
+            background-color: #d9edf7;
+            color: #31708f;
+        }
+    </style>
+</head>
+<body>
+    <h1>Moon Sighting Notification Test</h1>
+    
+    <div class="container">
+        <h2>Notification Permissions</h2>
+        <button id="requestPermission">Request Notification Permission</button>
+        <button id="checkPermission">Check Permission Status</button>
+        <div id="permissionStatus" class="status"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Push Notifications</h2>
+        <button id="subscribePush">Subscribe to Push Notifications</button>
+        <button id="unsubscribePush">Unsubscribe from Push Notifications</button>
+        <div id="pushStatus" class="status"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Test Notifications</h2>
+        <button id="sendTestNotification">Send Test Notification</button>
+        <button id="scheduleNotification">Schedule Notification (5 seconds)</button>
+        <div id="notificationStatus" class="status"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Moon Visibility Check</h2>
+        <button id="checkVisibility">Check Moon Visibility</button>
+        <div id="visibilityStatus" class="status"></div>
+    </div>
+    
+    <script>
+        // Import our modules
+        import { MoonAPI } from './moonApi.js';
+        import { LocationManager } from './locationManager.js';
+        import { NotificationManager } from './notificationManager.js';
+        import config from './config.js';
+        
+        // Initialize our managers
+        const moonApi = new MoonAPI();
+        const locationManager = new LocationManager(moonApi);
+        const notificationManager = new NotificationManager(moonApi, locationManager);
+        
+        // DOM Elements
+        const requestPermissionBtn = document.getElementById('requestPermission');
+        const checkPermissionBtn = document.getElementById('checkPermission');
+        const permissionStatus = document.getElementById('permissionStatus');
+        
+        const subscribePushBtn = document.getElementById('subscribePush');
+        const unsubscribePushBtn = document.getElementById('unsubscribePush');
+        const pushStatus = document.getElementById('pushStatus');
+        
+        const sendTestNotificationBtn = document.getElementById('sendTestNotification');
+        const scheduleNotificationBtn = document.getElementById('scheduleNotification');
+        const notificationStatus = document.getElementById('notificationStatus');
+        
+        const checkVisibilityBtn = document.getElementById('checkVisibility');
+        const visibilityStatus = document.getElementById('visibilityStatus');
+        
+        // Event Listeners
+        requestPermissionBtn.addEventListener('click', async () => {
+            try {
+                await notificationManager.checkPermission();
+                updatePermissionStatus();
+            } catch (error) {
+                showError(permissionStatus, error.message);
+            }
+        });
+        
+        checkPermissionBtn.addEventListener('click', () => {
+            updatePermissionStatus();
+        });
+        
+        subscribePushBtn.addEventListener('click', async () => {
+            try {
+                await notificationManager.subscribeToPushNotifications();
+                showSuccess(pushStatus, 'Successfully subscribed to push notifications');
+            } catch (error) {
+                showError(pushStatus, error.message);
+            }
+        });
+        
+        unsubscribePushBtn.addEventListener('click', async () => {
+            try {
+                // This would need to be implemented in the NotificationManager
+                // await notificationManager.unsubscribeFromPushNotifications();
+                showInfo(pushStatus, 'Unsubscribe functionality not implemented yet');
+            } catch (error) {
+                showError(pushStatus, error.message);
+            }
+        });
+        
+        sendTestNotificationBtn.addEventListener('click', () => {
+            try {
+                notificationManager.sendNotification(
+                    'Test Notification',
+                    'This is a test notification from the moon sighting app'
+                );
+                showSuccess(notificationStatus, 'Test notification sent');
+            } catch (error) {
+                showError(notificationStatus, error.message);
+            }
+        });
+        
+        scheduleNotificationBtn.addEventListener('click', () => {
+            try {
+                const moonInfo = {
+                    sunset: {
+                        iso: new Date(Date.now() + 5000).toISOString(),
+                        formatted12Hour: new Date(Date.now() + 5000).toLocaleTimeString()
+                    }
+                };
+                
+                notificationManager.scheduleMoonNotification(moonInfo);
+                showSuccess(notificationStatus, 'Notification scheduled for 5 seconds from now');
+            } catch (error) {
+                showError(notificationStatus, error.message);
+            }
+        });
+        
+        checkVisibilityBtn.addEventListener('click', async () => {
+            try {
+                await notificationManager.checkMoonVisibility();
+                showSuccess(visibilityStatus, 'Moon visibility check completed');
+            } catch (error) {
+                showError(visibilityStatus, error.message);
+            }
+        });
+        
+        // Helper Functions
+        function updatePermissionStatus() {
+            if (!('Notification' in window)) {
+                showError(permissionStatus, 'This browser does not support notifications');
+                return;
+            }
+            
+            const status = Notification.permission;
+            let message = '';
+            
+            switch (status) {
+                case 'granted':
+                    message = 'Notifications are enabled';
+                    showSuccess(permissionStatus, message);
+                    break;
+                case 'denied':
+                    message = 'Notifications are disabled';
+                    showError(permissionStatus, message);
+                    break;
+                case 'default':
+                    message = 'Notification permission has not been requested yet';
+                    showInfo(permissionStatus, message);
+                    break;
+            }
+        }
+        
+        function showSuccess(element, message) {
+            element.textContent = message;
+            element.className = 'status success';
+        }
+        
+        function showError(element, message) {
+            element.textContent = message;
+            element.className = 'status error';
+        }
+        
+        function showInfo(element, message) {
+            element.textContent = message;
+            element.className = 'status info';
+        }
+        
+        // Initialize
+        updatePermissionStatus();
+    </script>
+</body>
+</html> 

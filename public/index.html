@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moon Sighting App</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+</head>
+<body>
+    <header>
+        <h1>Moon Sighting App</h1>
+        <nav>
+            <button id="locationBtn">Change Location</button>
+            <button id="notificationBtn">Enable Notifications</button>
+        </nav>
+    </header>
+
+    <main>
+        <section id="moonDisplay">
+            <canvas id="moonCanvas"></canvas>
+            <div id="moonInfo">
+                <h2>Moon Phase</h2>
+                <p id="moonPhase"></p>
+                <p id="moonAge"></p>
+            </div>
+        </section>
+
+        <section id="visibilityInfo">
+            <h2>Visibility Information</h2>
+            <div id="sunsetInfo">
+                <p>Sunset: <span id="sunsetTime"></span></p>
+                <p>Moonset: <span id="moonsetTime"></span></p>
+            </div>
+            <div id="visibilityStatus">
+                <p>Visibility: <span id="visibilityText"></span></p>
+                <p>Confidence: <span id="confidenceText"></span></p>
+            </div>
+        </section>
+
+        <section id="locationInfo">
+            <h2>Current Location</h2>
+            <p id="coordinates"></p>
+            <div id="savedLocations">
+                <h3>Saved Locations</h3>
+                <ul id="locationsList"></ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Moon Sighting App &copy; 2024</p>
+    </footer>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+
+    <!-- Application Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/moonApi.js"></script>
+    <script src="/js/locationManager.js"></script>
+    <script src="/js/notificationManager.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html> 
