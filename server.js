@@ -24,7 +24,11 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(morgan('dev')); // Logging
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true
+}));
 
 // API Routes
 app.get('/api/moon-visibility', (req, res) => {
@@ -59,6 +63,12 @@ app.delete('/api/notifications/unsubscribe', (req, res) => {
 
 // Serve the main application
 app.get('*', (req, res) => {
+  // Check if the request is for a static file
+  if (req.path.match(/\.(js|css|html|png|jpg|jpeg|gif|ico|svg|json)$/)) {
+    return res.status(404).send('Not found');
+  }
+  
+  // Otherwise serve the main application
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
