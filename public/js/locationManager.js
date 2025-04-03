@@ -4,55 +4,45 @@
  * Manages location selection and storage for the moon sighting application.
  */
 
-const config = require('./config');
-
-/**
- * Location Manager class
- */
+// Location Manager for handling location selection and management
 class LocationManager {
     /**
      * Create a new Location Manager
-     * @param {Object} moonApi - The moon API instance
      */
-    constructor(moonApi) {
-        this.moonApi = moonApi;
+    constructor() {
         this.currentLocation = null;
         this.savedLocations = [];
         this.init();
     }
     
     async init() {
-        try {
-            // Load saved locations from localStorage
-            this.loadSavedLocations();
-
-            // If no current location is set, try to get the user's location
-            if (!this.currentLocation) {
-                await this.getCurrentLocation();
+        this.loadSavedLocations();
+        if (!this.currentLocation) {
+            try {
+                this.currentLocation = await this.getCurrentLocation();
+            } catch (error) {
+                console.error('Error getting current location:', error);
+                this.currentLocation = {
+                    name: 'San Francisco',
+                    latitude: 37.7749,
+                    longitude: -122.4194
+                };
             }
-        } catch (error) {
-            console.error('Error initializing location manager:', error);
         }
     }
     
     /**
      * Load saved locations from localStorage
-     * @returns {Array} Array of saved locations
      */
     loadSavedLocations() {
         try {
-            const savedLocationsJson = localStorage.getItem('savedLocations');
-            const currentLocationJson = localStorage.getItem('currentLocation');
-
-            if (savedLocationsJson) {
-                this.savedLocations = JSON.parse(savedLocationsJson);
-            }
-
-            if (currentLocationJson) {
-                this.currentLocation = JSON.parse(currentLocationJson);
-            }
+            const saved = localStorage.getItem('savedLocations');
+            const current = localStorage.getItem('currentLocation');
+            
+            this.savedLocations = saved ? JSON.parse(saved) : [];
+            this.currentLocation = current ? JSON.parse(current) : null;
         } catch (error) {
-            console.error('Error loading saved locations:', error);
+            console.error('Error loading locations:', error);
             this.savedLocations = [];
             this.currentLocation = null;
         }
@@ -64,9 +54,7 @@ class LocationManager {
     saveLocations() {
         try {
             localStorage.setItem('savedLocations', JSON.stringify(this.savedLocations));
-            if (this.currentLocation) {
-                localStorage.setItem('currentLocation', JSON.stringify(this.currentLocation));
-            }
+            localStorage.setItem('currentLocation', JSON.stringify(this.currentLocation));
         } catch (error) {
             console.error('Error saving locations:', error);
         }
@@ -74,7 +62,7 @@ class LocationManager {
     
     /**
      * Get the current location
-     * @returns {Object} Current location
+     * @returns {Promise<Object>} Promise that resolves to the current location
      */
     getCurrentLocation() {
         return new Promise((resolve, reject) => {
@@ -85,31 +73,21 @@ class LocationManager {
 
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    const location = {
-                        name: 'Current Location',
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    };
-
-                    // Try to get the location name using reverse geocoding
                     try {
-                        const response = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}`
-                        );
+                        const { latitude, longitude } = position.coords;
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                         const data = await response.json();
-                        location.name = data.display_name.split(',')[0];
+                        
+                        resolve({
+                            name: data.display_name || 'Current Location',
+                            latitude,
+                            longitude
+                        });
                     } catch (error) {
-                        console.warn('Error getting location name:', error);
+                        reject(error);
                     }
-
-                    this.currentLocation = location;
-                    this.saveLocations();
-                    resolve(location);
                 },
-                (error) => {
-                    console.error('Error getting current location:', error);
-                    reject(error);
-                }
+                (error) => reject(error)
             );
         });
     }
@@ -133,65 +111,28 @@ class LocationManager {
     
     /**
      * Add a new location
-     * @param {string} name - Location name
-     * @param {number} latitude - Location latitude
-     * @param {number} longitude - Location longitude
-     * @returns {Object} The added location
+     * @param {Object} location - Location to add
      */
-    async addLocation(location) {
-        // Check if location already exists
-        const existingLocation = this.savedLocations.find(
-            loc => loc.latitude === location.latitude && loc.longitude === location.longitude
-        );
-
-        if (!existingLocation) {
+    addLocation(location) {
+        if (!this.savedLocations.some(loc => 
+            loc.latitude === location.latitude && 
+            loc.longitude === location.longitude
+        )) {
             this.savedLocations.push(location);
             this.saveLocations();
         }
-
-        return location;
     }
     
     /**
      * Remove a location
      * @param {string} name - Name of the location to remove
-     * @returns {boolean} True if location was removed, false otherwise
      */
     removeLocation(locationName) {
         this.savedLocations = this.savedLocations.filter(loc => loc.name !== locationName);
-        
-        // If the removed location was the current location, set a new current location
-        if (this.currentLocation && this.currentLocation.name === locationName) {
+        if (this.currentLocation?.name === locationName) {
             this.currentLocation = this.savedLocations[0] || null;
         }
-        
         this.saveLocations();
-    }
-    
-    /**
-     * Get the user's current geolocation
-     * @returns {Promise<Object>} Promise that resolves to the user's location
-     */
-    getUserGeolocation() {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('Geolocation is not supported by your browser'));
-                return;
-            }
-            
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    resolve({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        name: 'My Location'
-                    });
-                },
-                error => {
-                    reject(error);
-                }
-            );
-        });
     }
     
     /**
@@ -240,5 +181,9 @@ class LocationManager {
     }
 }
 
-// Export the LocationManager class
-module.exports = LocationManager; 
+// Export for module compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LocationManager;
+} else {
+    window.LocationManager = LocationManager;
+} 

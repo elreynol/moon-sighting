@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#FFD700"/>
+  
+  <!-- Crescent moon shape -->
+  <path d="M256 16C126.5 16 16 126.5 16 256s110.5 240 240 240 240-110.5 240-240S385.5 16 256 16zm0 448c-114.9 0-208-93.1-208-208S141.1 48 256 48s208 93.1 208 208-93.1 208-208 208z" fill="#2C3E50"/>
+</svg> 

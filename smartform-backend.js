@@ -238,4 +238,22 @@ function calculateSunsetTime(date, latitude, longitude) {
 /**
  * Create viewing events in user's calendar based on new moon dates
  */
-function createViewing
+function createViewingEvents(newMoonDates, calendarId) {
+  const events = [];
+  const calendar = CalendarApp.getCalendarById(calendarId);
+  if (!calendar) {
+    throw new Error('Calendar not found. Please check the calendar ID in config.');
+  }
+  
+  for (const newMoonDate of newMoonDates) {
+    const sunsetTime = getSunsetTimeFromAPI(newMoonDate);
+    const event = calendar.createEvent(
+      `New Moon Viewing at ${config.location}`,
+      sunsetTime,
+      new Date(sunsetTime.getTime() + config.eventDuration * 60000)
+    );
+    events.push(event);
+  }
+  
+  return events;
+}

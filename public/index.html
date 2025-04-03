@@ -3,77 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moon Sighting App</title>
+    <meta name="description" content="Track moon visibility and receive notifications for moon sightings">
+    <meta name="theme-color" content="#3498db">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MoonSight">
+    
+    <!-- PWA Configuration -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">
+    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
+    
+    <title>Moon Sighting App</title>
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="/css/styles.css">
-    <link rel="icon" type="image/png" href="/images/favicon.png">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="/js/moonApi.js" as="script">
+    <link rel="preload" href="/js/locationManager.js" as="script">
+    <link rel="preload" href="/js/notificationManager.js" as="script">
 </head>
 <body>
-    <header>
-        <h1>Moon Sighting App</h1>
-        <nav>
-            <button id="locationBtn">Change Location</button>
-            <button id="notificationBtn">Enable Notifications</button>
-        </nav>
-    </header>
-
-    <main>
-        <section id="moonDisplay">
-            <canvas id="moonCanvas"></canvas>
-            <div id="moonInfo">
-                <h2>Moon Phase</h2>
-                <p id="moonPhase"></p>
-                <p id="moonAge"></p>
-            </div>
-        </section>
-
-        <section id="visibilityInfo">
-            <h2>Visibility Information</h2>
-            <div id="sunsetInfo">
-                <p>Sunset: <span id="sunsetTime"></span></p>
-                <p>Moonset: <span id="moonsetTime"></span></p>
-            </div>
-            <div id="visibilityStatus">
-                <p>Visibility: <span id="visibilityText"></span></p>
-                <p>Confidence: <span id="confidenceText"></span></p>
-            </div>
-        </section>
-
-        <section id="locationInfo">
-            <h2>Current Location</h2>
-            <p id="coordinates"></p>
-            <div id="savedLocations">
-                <h3>Saved Locations</h3>
-                <ul id="locationsList"></ul>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <p>Moon Sighting App &copy; 2024</p>
-    </footer>
-
-    <!-- Service Worker Registration -->
+    <div class="container">
+        <header>
+            <h1>Moon Sighting App</h1>
+        </header>
+        
+        <main>
+            <section id="location-section">
+                <h2>Select Location</h2>
+                <select id="location-select">
+                    <option value="">Loading locations...</option>
+                </select>
+            </section>
+            
+            <section id="moon-display">
+                <div id="moon-phase"></div>
+                <div id="moon-details"></div>
+            </section>
+            
+            <section id="visibility-info">
+                <h2>Visibility Information</h2>
+                <div id="visibility-details"></div>
+            </section>
+            
+            <section id="notification-section">
+                <h2>Notifications</h2>
+                <button id="notification-toggle">Enable Notifications</button>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Load scripts with error handling -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful');
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error(`Failed to load ${src}`));
+                document.body.appendChild(script);
             });
         }
-    </script>
 
-    <!-- Application Scripts -->
-    <script src="/js/config.js"></script>
-    <script src="/js/moonApi.js"></script>
-    <script src="/js/locationManager.js"></script>
-    <script src="/js/notificationManager.js"></script>
-    <script src="/js/app.js"></script>
+        // Load scripts in sequence
+        Promise.all([
+            loadScript('/js/moonApi.js'),
+            loadScript('/js/locationManager.js'),
+            loadScript('/js/notificationManager.js'),
+            loadScript('/js/app.js')
+        ]).catch(error => {
+            console.error('Error loading scripts:', error);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = 'Failed to load application. Please refresh the page.';
+            document.body.appendChild(errorDiv);
+        });
+    </script>
 </body>
 </html> 

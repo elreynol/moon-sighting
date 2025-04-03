@@ -10,7 +10,7 @@
 const PUBLIC_CALENDAR_ID = 'ht3jlfaac5lfd6263ulfh4tql8@group.calendar.google.com';
 const YOUR_CALENDAR_ID = '20cdf8ca111bc04ec5e6bb153acce7a2124d65583069b1903870eabab4a43423@group.calendar.google.com'; // Replace with your calendar ID
 const MONTHS_TO_PROCESS = 12; // How many months ahead to create events
-const EVENT_DURATION_HOURS = 2; // Duration of your new moon viewing events
+const EVENT_DURATION_HOURS = 1; // Duration of your new moon viewing events
 const DEFAULT_LOCATION = 'Houge Park'; // Update with your location
 const EVENT_DESCRIPTION = 'Join us to observe the new moon at Houge Park! If we do not spot the new moon we can still enjoy some stargazing.\n\nSuggested items to bring:\n- Prayer rug \n- Telescope or binoculars (optional)\n- Red flashlight (optional)\n- Warm clothes\n- Blanket or chair\n- Hot drinks\n\nPlease RSVP so we know how many people to expect.';
 

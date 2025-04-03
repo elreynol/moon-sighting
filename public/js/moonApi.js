@@ -12,17 +12,21 @@ const moonCalculator = require('./moonCalculator');
  * MoonAPI class that abstracts the implementation details
  */
 class MoonAPI {
-    /**
-     * Create a new MoonAPI instance
-     * @param {string} implementation - The implementation to use ('javascript' or 'python')
-     */
-    constructor(implementation = 'javascript') {
-        this.implementation = implementation;
-        this.api = implementation === 'python' 
-            ? new PythonMoonAPI() 
-            : new JavaScriptMoonAPI();
+    constructor() {
+        this.baseUrl = '/api';
     }
-    
+
+    async getMoonVisibility(latitude, longitude, date = new Date()) {
+        try {
+            const response = await fetch(`${this.baseUrl}/moon-visibility?lat=${latitude}&lng=${longitude}&date=${date.toISOString()}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching moon visibility:', error);
+            throw error;
+        }
+    }
+
     /**
      * Get information about upcoming new moons
      * @param {number} count - Number of new moons to find
@@ -32,17 +36,6 @@ class MoonAPI {
      */
     async getNewMoonInformation(count, latitude, longitude) {
         return this.api.getNewMoonInformation(count, latitude, longitude);
-    }
-    
-    /**
-     * Get moon visibility for a specific date and location
-     * @param {Date} date - Date to check visibility for
-     * @param {number} latitude - Latitude of the location
-     * @param {number} longitude - Longitude of the location
-     * @returns {Promise<Object>} Visibility assessment
-     */
-    async getMoonVisibility(date, latitude, longitude) {
-        return this.api.getMoonVisibility(date, latitude, longitude);
     }
     
     /**
@@ -263,5 +256,9 @@ class PythonMoonAPI {
     }
 }
 
-// Export the MoonAPI class
-module.exports = MoonAPI; 
+// Export for module compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MoonAPI;
+} else {
+    window.MoonAPI = MoonAPI;
+} 
